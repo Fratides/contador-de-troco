@@ -1,18 +1,18 @@
 const CACHE_NAME = 'duda-gourmet-v2';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon.svg',
-  '/assets/index-CIPXkIx5.css',
-  '/assets/index-tsJjVEWq.js',
-  '/assets/fundo-BvtbYP0Z.jpg',
-  '/assets/2-BNKhhOLY.png',
-  '/assets/5-DaPpLJZg.png',
-  '/assets/10-DaHuLOEB.png',
-  '/assets/20-4IIziVFw.png',
-  '/assets/50-ChtgX99Y.png',
-  '/assets/100-DTT_Ebx9.png'
+  './',
+  './index.html',
+  './manifest.json',
+  './icon.svg',
+  './assets/index-CIPXkIx5.css',
+  './assets/index-tsJjVEWq.js',
+  './assets/fundo-BvtbYP0Z.jpg',
+  './assets/2-BNKhhOLY.png',
+  './assets/5-DaPpLJZg.png',
+  './assets/10-DaHuLOEB.png',
+  './assets/20-4IIziVFw.png',
+  './assets/50-ChtgX99Y.png',
+  './assets/100-DTT_Ebx9.png'
 ];
 
 self.addEventListener('install', (event) => {
