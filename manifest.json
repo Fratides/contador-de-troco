@@ -1,0 +1,17 @@
+{
+  "name": "Duda Gourmet",
+  "short_name": "Duda Gourmet",
+  "description": "Calculadora de troco para doces",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#111827",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    }
+  ]
+}

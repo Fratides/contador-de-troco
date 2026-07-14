@@ -1,0 +1,11 @@
+node_modules/
+dist/
+android/
+ios/
+.gradle/
+.idea/
+.vscode/
+meu-projeto-calculadora/
+.DS_Store
+*.log
+.vercel
