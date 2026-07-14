@@ -8,3 +8,4 @@ ios/
 meu-projeto-calculadora/
 .DS_Store
 *.log
+.vercel

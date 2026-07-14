@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import note2 from './assets/notes/2.png'
 import note5 from './assets/notes/5.png'
 import note10 from './assets/notes/10.png'
@@ -27,6 +27,7 @@ export default function App(){
   const [manualConfirmed, setManualConfirmed] = useState(false)
   const [focusedValor, setFocusedValor] = useState(false)
   const [focusedManual, setFocusedManual] = useState(false)
+  const valorInputRef = useRef(null)
 
   useEffect(()=>{
     const saved = localStorage.getItem('valorUnitario')
@@ -49,6 +50,9 @@ export default function App(){
       setSelectedCounts({})
       setEditingValor(false)
       setFocusedValor(false)
+      if(valorInputRef.current){
+        valorInputRef.current.blur()
+      }
     }
   }
 
@@ -120,9 +124,9 @@ export default function App(){
           <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center input-group">
             <div className="relative input-with-button w-full">
               <input
+                ref={valorInputRef}
                 className="input-control pr-12"
                 value={editingValor ? inputValor : valorUnitario.toFixed(2)}
-                readOnly={!editingValor}
                 onClick={()=> { setEditingValor(true); setFocusedValor(true) }}
                 onFocus={()=>{ setEditingValor(true); setFocusedValor(true) }}
                 onBlur={()=> {
@@ -148,7 +152,7 @@ export default function App(){
           <label className="block text-sm font-medium text-slate-900 bg-slate-950/20 px-2 py-1 rounded-md">Quantidade</label>
           <div className="mt-2 flex items-center gap-3">
             <button onClick={decrement} className="btn-large bg-red-400 text-white">-</button>
-            <div className="text-xl font-medium min-w-[3rem] px-2 text-center flex items-center justify-center">{String(quantidade).padStart(2,'0')}</div>
+            <div className="text-xl font-medium min-w-[3rem] px-2 text-center flex items-center justify-center bg-slate-950 rounded-lg text-white">{String(quantidade).padStart(2,'0')}</div>
             <button onClick={increment} className="btn-large bg-green-400 text-white">+</button>
             <button onClick={novoPedido} className="ml-auto bg-gray-200 px-3 py-2 rounded-lg">Limpar</button>
           </div>
@@ -214,13 +218,15 @@ export default function App(){
                 <div key={key} className="note-card">
                   <img src={src} alt={`R$ ${n}`} className="note-image" />
 
-                  <div
-                    className="overlay-left"
-                    onPointerDown={(e)=> e.preventDefault()}
-                    onPointerUp={(e)=>{ e.stopPropagation(); removeNoteOne(n) }}
-                    onPointerCancel={()=> {}}
-                    onPointerLeave={()=> {}}
-                  />
+                  {count > 0 && (
+                    <div
+                      className="overlay-left"
+                      onPointerDown={(e)=> e.preventDefault()}
+                      onPointerUp={(e)=>{ e.stopPropagation(); removeNoteOne(n) }}
+                      onPointerCancel={()=> {}}
+                      onPointerLeave={()=> {}}
+                    />
+                  )}
                   <div
                     className="overlay-right"
                     onPointerDown={(e)=> e.preventDefault()}
