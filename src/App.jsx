@@ -36,6 +36,15 @@ export default function App(){
   const [clickedQuantityButtons, setClickedQuantityButtons] = useState({})
   const valorInputRef = useRef(null)
 
+  const formatarValorManualParaExibir = (valorCentsStr) => {
+    if (!valorCentsStr || valorCentsStr.length === 0) return ''
+    const padded = valorCentsStr.padStart(3, '0')
+    let inteiro = padded.slice(0, -2)
+    const centavos = padded.slice(-2)
+    inteiro = inteiro.replace(/^0+/, '') || '0'
+    return `${inteiro},${centavos}`
+  }
+
   useEffect(()=>{
     const saved = localStorage.getItem('produtos')
     if(saved){
@@ -209,8 +218,13 @@ export default function App(){
   },[selectedCounts])
 
   const receivedAmount = useMemo(()=>{
-    const manual = parseFloat((manualReceived||'').toString().replace(',','.'))
-    if(manualConfirmed && !isNaN(manual) && manual > 0) return manual
+    if (manualConfirmed && manualReceived && manualReceived.length > 0) {
+      const padded = manualReceived.padStart(3, '0')
+      const inteiro = padded.slice(0, -2)
+      const centavos = padded.slice(-2)
+      const valor = parseFloat(`${inteiro}.${centavos}`)
+      if (!isNaN(valor) && valor > 0) return valor
+    }
     return selectedSum
   },[manualReceived, manualConfirmed, selectedSum])
 
@@ -220,7 +234,7 @@ export default function App(){
 
   return (
     <div className="min-h-screen w-screen app-bg flex items-start justify-center pb-8">
-      <div className="w-full max-w-[390px] mx-auto rounded-2xl shadow-lg p-4 border border-slate-300/40" style={{ backgroundColor: 'rgba(255,255,255,0.88)', backgroundImage: `url(${fundoImg})`, backgroundSize: '55% auto', backgroundPosition: 'center 35%', backgroundRepeat: 'no-repeat', backgroundAttachment: 'local' }}>
+      <div className="w-full max-w-[390px] mx-auto rounded-2xl shadow-lg p-4 border border-slate-300/40" style={{ backgroundColor: 'rgba(255,255,255,0.88)', backgroundImage: `url(${fundoImg})`, backgroundSize: '55% auto', backgroundPosition: 'center 35%', backgroundRepeat: 'no-repeat', backgroundAttachment: 'local', transform: 'scale(1.1)', transformOrigin: 'top center' }}>
         <header className="mb-4">
           <h1 className="text-2xl font-semibold text-slate-900">Calculadora de Troco - Doces</h1>
         </header>
@@ -344,17 +358,18 @@ export default function App(){
               <input
                 className="input-control pr-12 w-full"
                 placeholder="Digite o valor recebido (ex: 50,00)"
-                value={manualReceived}
+                value={formatarValorManualParaExibir(manualReceived)}
                 onFocus={()=> setFocusedManual(true)}
                 onBlur={()=> setFocusedManual(false)}
-                onChange={e=> {
+                onInput={e=> {
                   const value = e.target.value
-                  setManualReceived(value)
-                  const manual = parseFloat(value.toString().replace(',','.'))
-                  setManualConfirmed(!isNaN(manual) && manual > 0)
+                  const digits = value.replace(/\D/g, '')
+                  const limited = digits.length > 10 ? digits.slice(0, 10) : digits // Limita a 10 dígitos (99999999,99)
+                  setManualReceived(limited)
+                  setManualConfirmed(limited.length > 0)
                   setSelectedCounts({})
                 }}
-                inputMode="decimal"
+                inputMode="numeric"
               />
             </div>
             <div className="flex gap-2">
