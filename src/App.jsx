@@ -72,9 +72,28 @@ export default function App(){
     setProdutoOriginal(original)
     setEditandoId(id)
     setEditNome(nome)
-    const valorStr = Math.round(valor * 100).toString()
-    setEditValor(valorStr)
+    const valorCents = Math.round(valor * 100).toString()
+    setEditValor(valorCents)
   }
+
+  const formatarValorParaSalvar = (valorCentsStr) => {
+    if (!valorCentsStr || valorCentsStr.length === 0) return '0.00'
+    const padded = valorCentsStr.padStart(3, '0')
+    const inteiro = padded.slice(0, -2)
+    const centavos = padded.slice(-2)
+    return `${inteiro}.${centavos}`
+  }
+
+  const formatarValorParaExibir = (valorCentsStr) => {
+    if (!valorCentsStr || valorCentsStr.length === 0) return ''
+    const padded = valorCentsStr.padStart(3, '0')
+    let inteiro = padded.slice(0, -2)
+    const centavos = padded.slice(-2)
+    inteiro = inteiro.replace(/^0+/, '') || '0'
+    return `${inteiro},${centavos}`
+  }
+
+
 
   const adicionarNovoProduto = () => {
     const novoId = proximoId
@@ -200,35 +219,13 @@ export default function App(){
                       <input
                         ref={valorInputRef}
                         type="text"
-                        value={(() => {
-                          const val = editValor;
-                          if (!val || val.length === 0) return '0,00';
-                          const padded = val.padStart(3, '0');
-                          const inteiro = padded.slice(0, -2);
-                          const centavos = padded.slice(-2);
-                          return `${inteiro},${centavos}`;
-                        })()}
+                        value={formatarValorParaExibir(editValor)}
                         onInput={e => {
-                          const input = e.target;
-                          const val = input.value;
-                          const digits = val.replace(/\D/g, '');
+                          const digits = e.target.value.replace(/\D/g, '');
                           const limited = digits.length > 5 ? digits.slice(0, 5) : digits;
-                          const cursorPosition = input.selectionStart;
-                          const previousLength = input.value.length;
                           setEditValor(limited);
-                          // Restore cursor position after re-render
-                          setTimeout(() => {
-                            if (valorInputRef.current) {
-                              const newLength = valorInputRef.current.value.length;
-                              const newPosition = cursorPosition + (newLength - previousLength);
-                              valorInputRef.current.setSelectionRange(
-                                Math.max(0, newPosition),
-                                Math.max(0, newPosition)
-                              );
-                            }
-                          }, 0);
                         }}
-                        placeholder="0,00"
+                        placeholder="00,00"
                         inputMode="numeric"
                         className="flex-1 border border-gray-300 rounded px-1.5 py-1 text-sm text-right"
                       />
@@ -236,14 +233,7 @@ export default function App(){
                   </div>
                   <div className="flex gap-1">
                     <button
-                      onClick={() => editarProduto(p.id, editNome, (() => {
-                        const val = editValor
-                        if (!val) return '0.00'
-                        const padded = val.padStart(3, '0')
-                        const inteiro = padded.slice(0, -2)
-                        const centavos = padded.slice(-2)
-                        return `${inteiro}.${centavos}`
-                      })())}
+                      onClick={() => editarProduto(p.id, editNome, formatarValorParaSalvar(editValor))}
                       className="flex-1 bg-green-500 text-white px-2 py-1 rounded text-xs font-medium"
                     >
                       ✓ Salvar
