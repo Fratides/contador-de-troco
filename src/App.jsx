@@ -18,51 +18,112 @@ const NOTE_MAP = {
 }
 
 export default function App(){
-  const [valorUnitario, setValorUnitario] = useState(7.50)
-  const [inputValor, setInputValor] = useState('7.50')
-  const [editingValor, setEditingValor] = useState(false)
-  const [quantidade, setQuantidade] = useState(1)
+  const [produtos, setProdutos] = useState([
+    { id: 0, nome: 'Produto Padrão', valor: 7.50, quantidade: 1 }
+  ])
+  const [proximoId, setProximoId] = useState(1)
+  const [editandoId, setEditandoId] = useState(null)
+  const [editNome, setEditNome] = useState('')
+  const [editValor, setEditValor] = useState('')
+  const [produtoOriginal, setProdutoOriginal] = useState(null)
   const [selectedCounts, setSelectedCounts] = useState({})
   const [manualReceived, setManualReceived] = useState('')
   const [manualConfirmed, setManualConfirmed] = useState(false)
-  const [focusedValor, setFocusedValor] = useState(false)
   const [focusedManual, setFocusedManual] = useState(false)
   const valorInputRef = useRef(null)
 
   useEffect(()=>{
-    const saved = localStorage.getItem('valorUnitario')
+    const saved = localStorage.getItem('produtos')
     if(saved){
-      const num = parseFloat(saved)
-      if(!isNaN(num)){
-        setValorUnitario(num)
-        setInputValor(num.toFixed(2))
+      try {
+        const parsed = JSON.parse(saved)
+        if(Array.isArray(parsed) && parsed.length > 0) {
+          setProdutos(parsed)
+          const maxId = Math.max(...parsed.map(p => p.id || 0))
+          setProximoId(maxId + 1)
+        }
+      } catch(e) {
+        console.error('Erro ao carregar produtos:', e)
       }
     }
   },[])
 
-  const saveValor = ()=>{
-    const num = parseFloat(inputValor.replace(',','.'))
-    if(!isNaN(num) && num > 0){
-      setValorUnitario(num)
-      localStorage.setItem('valorUnitario', num.toString())
-      setManualReceived('')
-      setManualConfirmed(false)
-      setSelectedCounts({})
-      setEditingValor(false)
-      setFocusedValor(false)
-      if(valorInputRef.current){
-        valorInputRef.current.blur()
-      }
+  const salvarProdutosArmazenamento = (prods) => {
+    localStorage.setItem('produtos', JSON.stringify(prods))
+  }
+
+  const editarProduto = (id, nome, valor) => {
+    const valor_num = parseFloat(valor.replace(',','.'))
+    if(nome.trim() && !isNaN(valor_num) && valor_num >= 0) {
+      const novaProd = produtos.map(p => 
+        p.id === id ? {...p, nome: nome.trim(), valor: valor_num} : p
+      )
+      setProdutos(novaProd)
+      salvarProdutosArmazenamento(novaProd)
+      setEditandoId(null)
+      setEditNome('')
+      setEditValor('')
+      setProdutoOriginal(null)
     }
   }
 
-  const increment = ()=> setQuantidade(q => q+1)
-  const decrement = ()=> setQuantidade(q => Math.max(1, q-1))
-  const novoPedido = ()=>{
-    setQuantidade(1)
-    setSelectedCounts({})
-    setManualReceived('')
-    setManualConfirmed(false)
+  const iniciarEdicao = (id, nome, valor) => {
+    const original = produtos.find(p => p.id === id)
+    setProdutoOriginal(original)
+    setEditandoId(id)
+    setEditNome(nome)
+    const valorStr = Math.round(valor * 100).toString()
+    setEditValor(valorStr)
+  }
+
+  const adicionarNovoProduto = () => {
+    const novoId = proximoId
+    const novoProduto = {
+      id: novoId,
+      nome: 'Novo',
+      valor: 0,
+      quantidade: 1
+    }
+    const novaProd = [...produtos, novoProduto]
+    setProdutos(novaProd)
+    salvarProdutosArmazenamento(novaProd)
+    setProximoId(novoId + 1)
+    setProdutoOriginal(null)
+    setEditandoId(novoId)
+    setEditNome('Novo')
+    setEditValor('')
+  }
+
+  const cancelarEdicao = () => {
+    if (produtoOriginal === null && editandoId !== null) {
+      const novaProd = produtos.filter(p => p.id !== editandoId)
+      setProdutos(novaProd)
+      salvarProdutosArmazenamento(novaProd)
+    } else if (produtoOriginal !== null) {
+      const novaProd = produtos.map(p => 
+        p.id === produtoOriginal.id ? produtoOriginal : p
+      )
+      setProdutos(novaProd)
+      salvarProdutosArmazenamento(novaProd)
+    }
+    setEditandoId(null)
+    setEditNome('')
+    setEditValor('')
+    setProdutoOriginal(null)
+  }
+
+  const removerProduto = (id) => {
+    const novaProd = produtos.filter(p => p.id !== id)
+    setProdutos(novaProd)
+    salvarProdutosArmazenamento(novaProd)
+  }
+
+  const atualizarQuantidade = (id, novaQtd) => {
+    const novaProd = produtos.map(p => 
+      p.id === id ? {...p, quantidade: Math.max(0, novaQtd)} : p
+    )
+    setProdutos(novaProd)
+    salvarProdutosArmazenamento(novaProd)
   }
 
   const clearNotesAndReceived = ()=>{
@@ -71,7 +132,9 @@ export default function App(){
     setManualConfirmed(false)
   }
 
-  const total = (valorUnitario * quantidade)
+  const total = useMemo(() => {
+    return produtos.reduce((acc, p) => acc + (p.valor * p.quantidade), 0)
+  }, [produtos])
 
   const addNoteOne = (note)=>{
     setSelectedCounts(prev => {
@@ -112,63 +175,141 @@ export default function App(){
   },[receivedAmount, total])
 
   return (
-    <div className="min-h-screen w-screen app-bg flex items-start justify-center">
+    <div className="min-h-screen w-screen app-bg flex items-start justify-center pb-8">
       <div className="w-full max-w-[390px] mx-auto rounded-2xl shadow-lg p-4 border border-slate-300/40" style={{ backgroundColor: 'rgba(255,255,255,0.88)', backgroundImage: `url(${fundoImg})`, backgroundSize: '55% auto', backgroundPosition: 'center 35%', backgroundRepeat: 'no-repeat', backgroundAttachment: 'local' }}>
         <header className="mb-4">
           <h1 className="text-2xl font-semibold text-slate-900">Calculadora de Troco - Doces</h1>
-          <p className="mt-2 text-sm text-slate-900">Toque nas notas para somar; ou digite o valor recebido.</p>
         </header>
 
-        <section className="mb-4">
-          <label className="block text-sm font-medium text-slate-900 bg-slate-950/20 px-2 py-1 rounded-md">Valor Unitário (R$)</label>
-          <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center input-group">
-            <div className="relative input-with-button w-full">
-              <input
-                ref={valorInputRef}
-                className="input-control pr-12"
-                value={editingValor ? inputValor : valorUnitario.toFixed(2)}
-                onClick={()=> { setEditingValor(true); setFocusedValor(true) }}
-                onFocus={()=>{ setEditingValor(true); setFocusedValor(true) }}
-                onBlur={()=> {
-                  setFocusedValor(false)
-                  setEditingValor(false)
-                  setInputValor(valorUnitario.toFixed(2))
-                }}
-                onChange={e=> setInputValor(e.target.value)}
-                inputMode="decimal"
-              />
-              {editingValor && (
-                <button onMouseDown={e => e.preventDefault()} onClick={saveValor} className="icon-button" type="button">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M16.704 5.29a1 1 0 010 1.414l-7.975 7.974a1 1 0 01-1.414 0L3.296 9.667a1 1 0 011.414-1.414l3.057 3.057 7.268-7.268a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                </button>
+        <section className="mb-2 space-y-2">
+          {produtos.map((p) => (
+            <div key={p.id}>
+              {editandoId === p.id ? (
+                <div className="bg-blue-50 p-2 rounded-lg space-y-2 border-2 border-blue-300">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={editNome}
+                      onChange={e => setEditNome(e.target.value)}
+                      placeholder="Nome"
+                      className="border border-gray-300 rounded px-2 py-1 text-sm"
+                      style={{width: '60%'}}
+                    />
+                    <div className="flex gap-1 items-center" style={{width: '40%'}}>
+                      <span className="text-sm font-medium">R$</span>
+                      <input
+                        ref={valorInputRef}
+                        type="text"
+                        value={(() => {
+                          const val = editValor;
+                          if (!val || val.length === 0) return '0,00';
+                          const padded = val.padStart(3, '0');
+                          const inteiro = padded.slice(0, -2);
+                          const centavos = padded.slice(-2);
+                          return `${inteiro},${centavos}`;
+                        })()}
+                        onInput={e => {
+                          const input = e.target;
+                          const val = input.value;
+                          const digits = val.replace(/\D/g, '');
+                          const limited = digits.length > 5 ? digits.slice(0, 5) : digits;
+                          const cursorPosition = input.selectionStart;
+                          const previousLength = input.value.length;
+                          setEditValor(limited);
+                          // Restore cursor position after re-render
+                          setTimeout(() => {
+                            if (valorInputRef.current) {
+                              const newLength = valorInputRef.current.value.length;
+                              const newPosition = cursorPosition + (newLength - previousLength);
+                              valorInputRef.current.setSelectionRange(
+                                Math.max(0, newPosition),
+                                Math.max(0, newPosition)
+                              );
+                            }
+                          }, 0);
+                        }}
+                        placeholder="0,00"
+                        inputMode="numeric"
+                        className="flex-1 border border-gray-300 rounded px-1.5 py-1 text-sm text-right"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => editarProduto(p.id, editNome, (() => {
+                        const val = editValor
+                        if (!val) return '0.00'
+                        const padded = val.padStart(3, '0')
+                        const inteiro = padded.slice(0, -2)
+                        const centavos = padded.slice(-2)
+                        return `${inteiro}.${centavos}`
+                      })())}
+                      className="flex-1 bg-green-500 text-white px-2 py-1 rounded text-xs font-medium"
+                    >
+                      ✓ Salvar
+                    </button>
+                    <button
+                      onClick={cancelarEdicao}
+                      className="flex-1 bg-gray-400 text-white px-2 py-1 rounded text-xs font-medium"
+                    >
+                      ✕ Cancelar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white border border-gray-300 rounded-lg p-2 flex items-center gap-2">
+                  <button
+                    onClick={() => removerProduto(p.id)}
+                    className="text-red-600 hover:text-red-800 font-bold text-lg flex-shrink-0"
+                  >
+                    🗑
+                  </button>
+                  <div className="flex-1 cursor-pointer" onClick={() => iniciarEdicao(p.id, p.nome, p.valor)}>
+                    <div className="font-medium text-slate-900 text-sm">{p.nome}</div>
+                    <div className="text-xs text-slate-600">R$ {p.valor.toFixed(2)}</div>
+                  </div>
+                  
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <button
+                      onClick={() => atualizarQuantidade(p.id, p.quantidade - 1)}
+                      className="bg-red-400 hover:bg-red-500 text-white font-bold text-xl px-3 py-2 rounded leading-none"
+                    >
+                      −
+                    </button>
+                    <div className="text-sm font-medium min-w-[2rem] text-center bg-slate-950 text-white rounded px-2 py-1">
+                      {String(p.quantidade).padStart(2,'0')}
+                    </div>
+                    <button
+                      onClick={() => atualizarQuantidade(p.id, p.quantidade + 1)}
+                      className="bg-green-400 hover:bg-green-500 text-white font-bold text-xl px-3 py-2 rounded leading-none"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
-          </div>
-        </section>
-
-        <section className="mb-4">
-          <label className="block text-sm font-medium text-slate-900 bg-slate-950/20 px-2 py-1 rounded-md">Quantidade</label>
-          <div className="mt-2 flex items-center gap-3">
-            <button onClick={decrement} className="btn-large bg-red-400 text-white">-</button>
-            <div className="text-xl font-medium min-w-[3rem] px-2 text-center flex items-center justify-center bg-slate-950 rounded-lg text-white">{String(quantidade).padStart(2,'0')}</div>
-            <button onClick={increment} className="btn-large bg-green-400 text-white">+</button>
-            <button onClick={novoPedido} className="ml-auto bg-gray-200 px-3 py-2 rounded-lg">Limpar</button>
-          </div>
+          ))}
+          
+          <button
+            onClick={adicionarNovoProduto}
+            className="w-full bg-blue-500 text-white font-semibold py-1.5 rounded-lg text-sm"
+          >
+            + Adicionar Produto
+          </button>
         </section>
 
         <section className="mb-4">
           <div className="flex justify-between items-center">
-            <div className="text-sm text-slate-900 bg-slate-950/20 px-2 py-1 rounded-md">Total</div>
-            <div className="text-xl font-semibold text-white bg-slate-950/80 px-2 py-1 rounded-md">R$ {total.toFixed(2)}</div>
+            <div className="text-sm text-slate-900 bg-gray-300 px-2 py-1 rounded-md font-semibold">Total</div>
+            <div className="text-2xl font-bold text-white bg-slate-950/80 px-2 py-1 rounded-md">R$ {total.toFixed(2)}</div>
           </div>
         </section>
 
         <section className="mb-4">
-          <div className="text-sm text-slate-900 mb-2 bg-slate-950/20 inline-block px-2 py-1 rounded-md">Dinheiro Recebido</div>
-          <div className="flex flex-col gap-2 mb-2 sm:flex-row sm:flex-wrap sm:items-center input-group">
-            <div className="relative input-with-button flex-1 min-w-0">
+          <div className="text-sm text-slate-900 mb-2 bg-gray-300 inline-block px-2 py-1 rounded-md font-semibold">Dinheiro Recebido</div>
+          <div className="flex flex-col gap-2 mb-2">
+            <div className="relative input-with-button w-full">
               <input
                 className="input-control pr-12 w-full"
                 placeholder="Digite o valor recebido (ex: 50,00)"
@@ -184,28 +325,19 @@ export default function App(){
                 }}
                 inputMode="decimal"
               />
-              {focusedManual && (
+            </div>
+            <div className="flex gap-2">
+              <div className="text-sm text-slate-900 bg-gray-300 px-2 py-1 rounded-md font-semibold">ou</div>
+              <div className="flex items-center gap-2 text-sm text-slate-900 font-medium bg-gray-300 px-2 py-1 rounded-md flex-1">
+                Usar notas
                 <button
                   type="button"
-                  className="icon-button"
-                  disabled
+                  onClick={clearNotesAndReceived}
+                  className="text-xs font-semibold text-slate-900 bg-white px-2 py-1 rounded-md shadow-sm ml-auto"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M16.704 5.29a1 1 0 010 1.414l-7.975 7.974a1 1 0 01-1.414 0L3.296 9.667a1 1 0 011.414-1.414l3.057 3.057 7.268-7.268a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
+                  Limpar
                 </button>
-              )}
-            </div>
-              <div className="text-sm text-slate-900 sm:ml-2 bg-slate-950/20 px-2 py-1 rounded-md">ou</div>
-            <div className="flex items-center gap-2 text-sm text-slate-900 font-medium bg-slate-950/20 px-2 py-1 rounded-md">
-              Usar notas
-              <button
-                type="button"
-                onClick={clearNotesAndReceived}
-                className="text-xs font-semibold text-slate-900 bg-white/80 px-2 py-1 rounded-md shadow-sm"
-              >
-                Limpar
-              </button>
+              </div>
             </div>
           </div>
 
@@ -241,11 +373,11 @@ export default function App(){
             })}
           </div>
 
-          <div className="mt-3 text-sm text-slate-900 bg-slate-950/20 inline-block px-2 py-1 rounded-md">Total recebido: <span className="font-semibold text-slate-900">R$ {receivedAmount.toFixed(2)}</span></div>
+          <div className="mt-3 text-sm text-slate-900 bg-gray-300 inline-block px-2 py-1 rounded-md font-semibold">Total Geral da Compra (R$) <span className="font-bold text-slate-900">R$ {total.toFixed(2)}</span></div>
         </section>
 
         <section>
-          <div className={`mt-2 text-3xl font-bold ${isNaN(troco) ? 'text-slate-900' : troco >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+          <div className={`mt-2 text-2xl font-bold ${isNaN(troco) ? 'text-slate-900' : troco >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
             {isNaN(troco)
               ? '—'
               : troco >= 0
