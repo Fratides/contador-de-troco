@@ -30,6 +30,10 @@ export default function App(){
   const [manualReceived, setManualReceived] = useState('')
   const [manualConfirmed, setManualConfirmed] = useState(false)
   const [focusedManual, setFocusedManual] = useState(false)
+  const [resetClicked, setResetClicked] = useState(false)
+  const [clearNotesClicked, setClearNotesClicked] = useState(false)
+  const [addProductClicked, setAddProductClicked] = useState(false)
+  const [clickedQuantityButtons, setClickedQuantityButtons] = useState({})
   const valorInputRef = useRef(null)
 
   useEffect(()=>{
@@ -111,6 +115,8 @@ export default function App(){
     setEditandoId(novoId)
     setEditNome('Novo')
     setEditValor('')
+    setAddProductClicked(true)
+    setTimeout(() => setAddProductClicked(false), 150)
   }
 
   const cancelarEdicao = () => {
@@ -137,18 +143,37 @@ export default function App(){
     salvarProdutosArmazenamento(novaProd)
   }
 
-  const atualizarQuantidade = (id, novaQtd) => {
+  const atualizarQuantidade = (id, novaQtd, type) => {
     const novaProd = produtos.map(p => 
       p.id === id ? {...p, quantidade: Math.max(0, novaQtd)} : p
     )
     setProdutos(novaProd)
     salvarProdutosArmazenamento(novaProd)
+    
+    const buttonKey = `${id}-${type}`
+    setClickedQuantityButtons(prev => ({...prev, [buttonKey]: true}))
+    setTimeout(() => {
+      setClickedQuantityButtons(prev => ({...prev, [buttonKey]: false}))
+    }, 150)
   }
 
   const clearNotesAndReceived = ()=>{
     setSelectedCounts({})
     setManualReceived('')
     setManualConfirmed(false)
+    setClearNotesClicked(true)
+    setTimeout(() => setClearNotesClicked(false), 150)
+  }
+
+  const resetQuantities = ()=>{
+    const novaProd = produtos.map((p, index) => ({
+      ...p,
+      quantidade: index === 0 ? 1 : 0
+    }))
+    setProdutos(novaProd)
+    salvarProdutosArmazenamento(novaProd)
+    setResetClicked(true)
+    setTimeout(() => setResetClicked(false), 150)
   }
 
   const total = useMemo(() => {
@@ -261,8 +286,10 @@ export default function App(){
                   
                   <div className="flex items-center gap-1.5 flex-shrink-0">
                     <button
-                      onClick={() => atualizarQuantidade(p.id, p.quantidade - 1)}
-                      className="bg-red-400 hover:bg-red-500 text-white font-bold text-xl px-3 py-2 rounded leading-none"
+                      onClick={() => atualizarQuantidade(p.id, p.quantidade - 1, 'minus')}
+                      className={`bg-red-400 hover:bg-red-500 text-white font-bold text-xl px-3 py-2 rounded leading-none transition-all duration-100 ${
+                        clickedQuantityButtons[`${p.id}-minus`] ? 'scale-95' : ''
+                      }`}
                     >
                       −
                     </button>
@@ -270,8 +297,10 @@ export default function App(){
                       {String(p.quantidade).padStart(2,'0')}
                     </div>
                     <button
-                      onClick={() => atualizarQuantidade(p.id, p.quantidade + 1)}
-                      className="bg-green-400 hover:bg-green-500 text-white font-bold text-xl px-3 py-2 rounded leading-none"
+                      onClick={() => atualizarQuantidade(p.id, p.quantidade + 1, 'plus')}
+                      className={`bg-green-400 hover:bg-green-500 text-white font-bold text-xl px-3 py-2 rounded leading-none transition-all duration-100 ${
+                        clickedQuantityButtons[`${p.id}-plus`] ? 'scale-95' : ''
+                      }`}
                     >
                       +
                     </button>
@@ -281,12 +310,24 @@ export default function App(){
             </div>
           ))}
           
-          <button
-            onClick={adicionarNovoProduto}
-            className="w-full bg-blue-500 text-white font-semibold py-1.5 rounded-lg text-sm"
-          >
-            + Adicionar Produto
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={resetQuantities}
+              className={`w-[30%] text-white font-semibold py-1.5 rounded-lg text-xs shadow-sm transition-all duration-100 ${
+                resetClicked ? 'scale-95' : ''
+              } bg-slate-950/80`}
+            >
+              Limpar Qtd
+            </button>
+            <button
+              onClick={adicionarNovoProduto}
+              className={`flex-1 bg-blue-500 text-white font-semibold py-1.5 rounded-lg text-sm transition-all duration-100 ${
+                addProductClicked ? 'scale-95' : ''
+              }`}
+            >
+              + Adicionar Produto
+            </button>
+          </div>
         </section>
 
         <section className="mb-4">
@@ -323,7 +364,9 @@ export default function App(){
                 <button
                   type="button"
                   onClick={clearNotesAndReceived}
-                  className="text-xs font-semibold text-slate-900 bg-white px-2 py-1 rounded-md shadow-sm ml-auto"
+                  className={`text-xs font-semibold text-white bg-slate-950/80 px-2 py-1 rounded-md shadow-sm ml-auto transition-all duration-100 ${
+                    clearNotesClicked ? 'scale-95' : ''
+                  }`}
                 >
                   Limpar
                 </button>
